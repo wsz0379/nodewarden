@@ -48,6 +48,8 @@ function buildDeviceResponse(device: Device): DeviceResponse {
     creationDate: device.createdAt,
     RevisionDate: device.updatedAt,
     revisionDate: device.updatedAt,
+    LastActivityDate: device.lastSeenAt,
+    lastActivityDate: device.lastSeenAt,
     LastSeenAt: device.lastSeenAt,
     lastSeenAt: device.lastSeenAt,
     HasStoredDevice: true,

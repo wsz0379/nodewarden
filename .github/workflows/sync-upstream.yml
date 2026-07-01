@@ -17,7 +17,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
         with:
           fetch-depth: 0
 
@@ -49,9 +49,11 @@ jobs:
               echo "Tag '$LATEST_TAG' not found after fetch."
               exit 1
             fi
-            echo "mode=auto" >> $GITHUB_OUTPUT
-            echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-            echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+            {
+              echo "mode=auto"
+              echo "latest_tag=$LATEST_TAG"
+              echo "target_sha=$TARGET_SHA"
+            } >> "$GITHUB_OUTPUT"
             echo "Auto mode — latest release: $LATEST_TAG ($TARGET_SHA)"
 
           elif [ -n "$MANUAL_INPUT" ]; then
@@ -61,15 +63,19 @@ jobs:
               echo "Cannot resolve '$MANUAL_INPUT' to a commit."
               exit 1
             fi
-            echo "mode=manual" >> $GITHUB_OUTPUT
-            echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+            {
+              echo "mode=manual"
+              echo "target_sha=$TARGET_SHA"
+            } >> "$GITHUB_OUTPUT"
             echo "Manual mode — target: $MANUAL_INPUT ($TARGET_SHA)"
 
           else
             # Manual mode, blank input: use latest commit on upstream/main
             TARGET_SHA=$(git rev-parse upstream/main)
-            echo "mode=manual" >> $GITHUB_OUTPUT
-            echo "target_sha=$TARGET_SHA" >> $GITHUB_OUTPUT
+            {
+              echo "mode=manual"
+              echo "target_sha=$TARGET_SHA"
+            } >> "$GITHUB_OUTPUT"
             echo "Manual mode — latest commit: $TARGET_SHA"
           fi
 
@@ -84,19 +90,19 @@ jobs:
             CURRENT_SHA=$(git rev-parse HEAD)
             if [ "$CURRENT_SHA" = "$TARGET_SHA" ]; then
               echo "Already at $TARGET_SHA — skipping."
-              echo "needs_update=false" >> $GITHUB_OUTPUT
+              echo "needs_update=false" >> "$GITHUB_OUTPUT"
             else
               echo "Switching to $TARGET_SHA"
-              echo "needs_update=true" >> $GITHUB_OUTPUT
+              echo "needs_update=true" >> "$GITHUB_OUTPUT"
             fi
           else
             # Auto: skip if target is already in ancestry
             if git merge-base --is-ancestor "$TARGET_SHA" HEAD 2>/dev/null; then
               echo "Already up to date with $TARGET_SHA — skipping."
-              echo "needs_update=false" >> $GITHUB_OUTPUT
+              echo "needs_update=false" >> "$GITHUB_OUTPUT"
             else
               echo "Update needed — target: $TARGET_SHA"
-              echo "needs_update=true" >> $GITHUB_OUTPUT
+              echo "needs_update=true" >> "$GITHUB_OUTPUT"
             fi
           fi
 
@@ -117,7 +123,7 @@ jobs:
         if: steps.check.outputs.needs_update == 'true'
         run: |
           # Always keep our own workflow file, never let upstream overwrite it
-          git checkout HEAD@{1} -- .github/workflows/sync-upstream.yml 2>/dev/null || true
+          git checkout 'HEAD@{1}' -- .github/workflows/sync-upstream.yml 2>/dev/null || true
           if ! git diff --cached --quiet; then
             git commit -m "chore: restore sync-upstream workflow after sync"
           fi
@@ -134,10 +140,12 @@ jobs:
       - name: Summary
         run: |
           if [ "${{ steps.check.outputs.needs_update }}" = "true" ]; then
-            echo "### Synced successfully" >> $GITHUB_STEP_SUMMARY
-            echo "- **Mode:** ${{ steps.resolve.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Tag:** ${{ steps.resolve.outputs.latest_tag || 'N/A (manual)' }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Commit:** \`${{ steps.resolve.outputs.target_sha }}\`" >> $GITHUB_STEP_SUMMARY
+            {
+              echo "### Synced successfully"
+              echo "- **Mode:** ${{ steps.resolve.outputs.mode }}"
+              echo "- **Tag:** ${{ steps.resolve.outputs.latest_tag || 'N/A (manual)' }}"
+              echo "- **Commit:** \`${{ steps.resolve.outputs.target_sha }}\`"
+            } >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "### Nothing to update" >> $GITHUB_STEP_SUMMARY
+            echo "### Nothing to update" >> "$GITHUB_STEP_SUMMARY"
           fi

@@ -307,6 +307,7 @@ export interface DeviceResponse {
   type: number;
   creationDate: string;
   revisionDate: string;
+  lastActivityDate?: string | null;
   lastSeenAt?: string | null;
   hasStoredDevice?: boolean;
   isTrusted: boolean;

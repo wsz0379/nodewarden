@@ -42,19 +42,31 @@ const NODEWARDEN_CSV_OBJECT_FIELDS: Record<'card' | 'identity' | 'sshKey', reado
   sshKey: ['privateKey', 'publicKey', 'keyFingerprint', 'fingerprint'],
 };
 
+// Parse the `fields` CSV column into key-value pairs.
+// Lines without a `: ` delimiter are treated as continuations of the previous
+// line's value, preserving multiline content such as SSH private keys.
 function parseBitwardenCsvFieldLines(rawFields: unknown): BitwardenCsvFieldLine[] {
   return String(rawFields || '')
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => {
+    .reduce<BitwardenCsvFieldLine[]>((acc, line) => {
       const delim = line.lastIndexOf(': ');
-      if (delim < 0) return null;
+      if (delim < 0) {
+        // Continuation line — append to the previous entry's value.
+        if (acc.length > 0) {
+          acc[acc.length - 1].value += '\n' + line;
+        }
+        return acc;
+      }
+      // New key-value line.
       const key = txt(line.slice(0, delim));
       const value = txt(line.slice(delim + 2));
-      return key && value ? { key, value } : null;
-    })
-    .filter((line): line is BitwardenCsvFieldLine => !!line);
+      if (key && value) {
+        acc.push({ key, value });
+      }
+      return acc;
+    }, []);
 }
 
 function getNodeWardenCsvType(lines: BitwardenCsvFieldLine[]): number | null {
