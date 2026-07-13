@@ -26,7 +26,16 @@ jobs:
           node-version: 22
 
       - name: Sync generated Bitwarden domains
-        run: npm run domains:sync -- --ref "${{ inputs.bitwarden_ref || 'main' }}"
+        env:
+          BITWARDEN_REF: ${{ inputs.bitwarden_ref || 'main' }}
+        run: |
+          case "$BITWARDEN_REF" in
+            "" | *[!A-Za-z0-9._/-]* )
+              echo "Invalid bitwarden_ref"
+              exit 1
+              ;;
+          esac
+          npm run domains:sync -- --ref "$BITWARDEN_REF"
 
       - name: Verify custom domains were not touched
         run: git diff --exit-code -- src/static/global_domains.custom.json

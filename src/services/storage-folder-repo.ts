@@ -19,11 +19,20 @@ export async function getFolder(db: D1Database, id: string): Promise<Folder | nu
   return mapFolderRow(row);
 }
 
+export async function getFolderForUser(db: D1Database, id: string, userId: string): Promise<Folder | null> {
+  const row = await db
+    .prepare('SELECT id, user_id, name, created_at, updated_at FROM folders WHERE id = ? AND user_id = ?')
+    .bind(id, userId)
+    .first<any>();
+  if (!row) return null;
+  return mapFolderRow(row);
+}
+
 export async function saveFolder(db: D1Database, folder: Folder): Promise<void> {
   await db
     .prepare(
       'INSERT INTO folders(id, user_id, name, created_at, updated_at) VALUES(?, ?, ?, ?, ?) ' +
-      'ON CONFLICT(id) DO UPDATE SET user_id=excluded.user_id, name=excluded.name, updated_at=excluded.updated_at'
+      'ON CONFLICT(id) DO UPDATE SET name=excluded.name, updated_at=excluded.updated_at WHERE user_id=excluded.user_id'
     )
     .bind(folder.id, folder.userId, folder.name, folder.createdAt, folder.updatedAt)
     .run();
